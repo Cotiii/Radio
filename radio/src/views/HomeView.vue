@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <h1>Homepage</h1>
+    <h1>RADIO</h1>
   </v-container>
 </template>
 
