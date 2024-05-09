@@ -1,5 +1,5 @@
 <template>
-<div class="radio-list">
+  <div class="radio-list">
     <v-text-field
       v-model="searchTerm"
       label="Search stations"
@@ -27,10 +27,11 @@
           <v-card-title>{{ station.name }}</v-card-title>
           <v-card-text>
             <p>Country: {{ station.country }}</p>
-            <p>Genre: {{ Array.isArray(station.tags) ? station.tags.join(', ') : '' }}</p>
           </v-card-text>
           <v-card-actions>
-            <v-btn @click="addToFavorites(station)" color="primary">Add to Favorites</v-btn>
+            <v-btn @click="toggleFavorite(station)" color="primary">
+            <v-icon :color="isFavorite(station) ? 'red' : 'grey'">{{ isFavorite(station) ? 'mdi-heart' : 'mdi-heart-outline' }}</v-icon>
+            </v-btn>
             <v-btn @click="playStation(station)" color="primary">Play</v-btn>
           </v-card-actions>
         </v-card>
@@ -51,7 +52,8 @@ export default {
       searchTerm: '',
       filteredStations: [],
       defaultImage: defaultImage, // URL dell'immagine di default
-      currentAudio: null // Elemento audio corrente
+      currentAudio: null, // Elemento audio corrente
+      favorites: [] // Array per memorizzare le stazioni preferite
     };
   },
   methods: {
@@ -67,41 +69,78 @@ export default {
           console.error('Error fetching stations:', error);
           this.loading = false;
         });
-    },filterStations() {
-  this.filteredStations = this.stations.filter(station => {
-    return (
-      (station.country.toLowerCase() === 'italy') &&
-      (
-        station.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        (Array.isArray(station.tags) &&
-          station.tags.some(tag =>
-            tag.toLowerCase().includes(this.searchTerm.toLowerCase())
-          ))
-      )
-    );
-  });
-},
-    addToFavorites(station) {
-      // Implementa la logica per aggiungere la stazione radio ai preferiti
-      console.log('Aggiungi ai preferiti:', station);
     },
- playStation(station) {
-  if (this.currentAudio) {
+    filterStations() {
+      this.filteredStations = this.stations.filter(station => {
+        return (
+          (station.country.toLowerCase() === 'italy') &&
+          (
+            station.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+            (Array.isArray(station.tags) &&
+              station.tags.some(tag =>
+                tag.toLowerCase().includes(this.searchTerm.toLowerCase())
+              ))
+          )
+        );
+      });
+    },
+
+    
+    addToFavorites(station) {
+  // Recupera le stazioni preferite dal local storage
+  let favorites = JSON.parse(localStorage.getItem('favoriteStations')) || [];
+
+  // Verifica se la stazione è già presente tra i preferiti
+  if (!favorites.some(favorite => favorite.id === station.id)) {
+    // Aggiungi la stazione preferita al local storage
+    favorites.push(station);
+    localStorage.setItem('favoriteStations', JSON.stringify(favorites));
+  } else {
+    // Stazione già presente nei preferiti, mostra un messaggio o esegui un'altra azione
+    console.log('Stazione già presente nei preferiti');
+  }
+},
+    removeFromFavorites(station) {
+      // Rimuovi la stazione dai preferiti
+      this.favorites = this.favorites.filter(favorite => favorite.id !== station.id);
+    },
+    toggleFavorite(station) {
+      // Se la stazione è già nei preferiti, rimuovila, altrimenti aggiungila
+      if (this.isFavorite(station)) {
+        this.removeFromFavorites(station);
+      } else {
+        this.addToFavorites(station);
+      }
+    },
+    isFavorite(station) {
+      // Verifica se la stazione è presente nei preferiti
+      return this.favorites.some(favorite => favorite.id === station.id);
+    },
+    playStation(station) {
+  // Verifica se c'è un'audio in riproduzione e se corrisponde alla stazione attualmente selezionata
+  if (this.currentAudio && this.currentAudio.src === station.url) {
     // Interrompi la riproduzione della stazione radio corrente
     this.currentAudio.pause();
-  }
-
-  // Crea un nuovo elemento audio per la stazione radio selezionata
-  this.currentAudio = new Audio(station.url);
-
-  // Aggiungi un evento 'ended' per ripulire l'elemento audio corrente quando la riproduzione è finita
-  this.currentAudio.addEventListener('ended', () => {
     this.currentAudio = null;
-  });
+  } else {
+    // Interrompi la riproduzione della stazione radio corrente se ce n'è una
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+    }
 
-  // Avvia la riproduzione della nuova stazione radio
-  this.currentAudio.play();
+    // Crea un nuovo elemento audio per la stazione radio selezionata
+    this.currentAudio = new Audio(station.url);
+
+    // Aggiungi un evento 'ended' per ripulire l'elemento audio corrente quando la riproduzione è finita
+    this.currentAudio.addEventListener('ended', () => {
+      this.currentAudio = null;
+    });
+
+    // Avvia la riproduzione della nuova stazione radio
+    this.currentAudio.play();
+  }
 },
+
     getStationIcon(station) {
       return station.favicon || this.defaultImage; // Utilizza l'icona della stazione o l'immagine di default
     }
@@ -115,11 +154,10 @@ export default {
     this.fetchStations();
   }
 };
-
 </script>
 
-<style>
-/* Component styles */
+<style scoped>
+/* Stili del componente */
 .card-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
