@@ -1,21 +1,41 @@
 <template>
-  <div class="radio-list">
-    <input
-      type="text"
-      placeholder="Search stations..."
+<div class="radio-list">
+    <v-text-field
       v-model="searchTerm"
-    />
-    <div v-if="loading">Loading...</div>
-    <div v-else class="card-container">
-      <div v-for="station in filteredStations" :key="station.id" class="card">
-        <img :src="getStationIcon(station)" :alt="station.name" class="radio-image" />
-        <h2>{{ station.name }}</h2>
-        <p>Country: {{ station.country }}</p>
-        <p>Genre: {{ Array.isArray(station.tags) ? station.tags.join(', ') : '' }}</p>
-        <button @click="addToFavorites(station)" class="favorite-button">Aggiungi ai preferiti</button>
-        <button @click="playStation(station)" class="play-button">Riproduci</button>
-      </div>
-    </div>
+      label="Search stations"
+      outlined
+    ></v-text-field>
+    <v-progress-linear
+      v-if="loading"
+      indeterminate
+      color="primary"
+    ></v-progress-linear>
+    <v-row v-else>
+      <v-col
+        v-for="station in filteredStations"
+        :key="station.id"
+        cols="12"
+        md="6"
+        lg="4"
+      >
+        <v-card class="elevation-2">
+          <v-img
+            :src="getStationIcon(station)"
+            :alt="station.name"
+            class="radio-image"
+          ></v-img>
+          <v-card-title>{{ station.name }}</v-card-title>
+          <v-card-text>
+            <p>Country: {{ station.country }}</p>
+            <p>Genre: {{ Array.isArray(station.tags) ? station.tags.join(', ') : '' }}</p>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn @click="addToFavorites(station)" color="primary">Add to Favorites</v-btn>
+            <v-btn @click="playStation(station)" color="primary">Play</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
   </div>
 </template>
 
@@ -47,33 +67,41 @@ export default {
           console.error('Error fetching stations:', error);
           this.loading = false;
         });
-    },
-    filterStations() {
-      this.filteredStations = this.stations.filter(station => {
-        return (
-          station.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-          station.country.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-          (Array.isArray(station.tags) &&
-            station.tags.some(tag =>
-              tag.toLowerCase().includes(this.searchTerm.toLowerCase())
-            ))
-        );
-      });
-    },
+    },filterStations() {
+  this.filteredStations = this.stations.filter(station => {
+    return (
+      (station.country.toLowerCase() === 'italy') &&
+      (
+        station.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        (Array.isArray(station.tags) &&
+          station.tags.some(tag =>
+            tag.toLowerCase().includes(this.searchTerm.toLowerCase())
+          ))
+      )
+    );
+  });
+},
     addToFavorites(station) {
       // Implementa la logica per aggiungere la stazione radio ai preferiti
       console.log('Aggiungi ai preferiti:', station);
     },
-    playStation(station) {
-      if (this.currentAudio) {
-        // Se c'è già un'audio in riproduzione, interrompilo prima di riprodurre uno nuovo
-        this.currentAudio.pause();
-      }
+ playStation(station) {
+  if (this.currentAudio) {
+    // Interrompi la riproduzione della stazione radio corrente
+    this.currentAudio.pause();
+  }
 
-      // Crea un nuovo elemento audio per la stazione radio selezionata
-      this.currentAudio = new Audio(station.url);
-      this.currentAudio.play(); // Avvia la riproduzione
-    },
+  // Crea un nuovo elemento audio per la stazione radio selezionata
+  this.currentAudio = new Audio(station.url);
+
+  // Aggiungi un evento 'ended' per ripulire l'elemento audio corrente quando la riproduzione è finita
+  this.currentAudio.addEventListener('ended', () => {
+    this.currentAudio = null;
+  });
+
+  // Avvia la riproduzione della nuova stazione radio
+  this.currentAudio.play();
+},
     getStationIcon(station) {
       return station.favicon || this.defaultImage; // Utilizza l'icona della stazione o l'immagine di default
     }
@@ -87,6 +115,7 @@ export default {
     this.fetchStations();
   }
 };
+
 </script>
 
 <style>
@@ -124,5 +153,10 @@ export default {
 .favorite-button:hover,
 .play-button:hover {
   background-color: #0056b3;
+}
+
+.radio-image {
+  height: 200px; /* Altezza desiderata per le immagini */
+  object-fit: cover; /* Scala l'immagine per adattarla al contenitore mantenendo l'aspect ratio */
 }
 </style>
