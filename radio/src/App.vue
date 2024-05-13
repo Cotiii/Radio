@@ -1,7 +1,8 @@
 <template>
   <nav>
     <router-link to="/">RADIO</router-link> |
-    <router-link to="/about">FAVORITES</router-link> 
+    <router-link to="/preferiti">PREFERITI</router-link> 
+    <router-link to="/mappamondo">MAPPAMONDO</router-link> 
   </nav>
   <router-view/>
 </template>

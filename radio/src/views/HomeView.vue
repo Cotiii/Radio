@@ -18,19 +18,18 @@
         md="6"
         lg="4"
       >
-        <v-card class="elevation-2">
+        <v-card class="elevation-10" outlined>
           <v-img
             :src="getStationIcon(station)"
             :alt="station.name"
             class="radio-image"
           ></v-img>
-          <v-card-title>{{ station.name }}</v-card-title>
-          <v-card-text>
-            <p>Country: {{ station.country }}</p>
-          </v-card-text>
+          <v-card-title class="text-h6">{{ station.name }}</v-card-title>
+          <v-card-subtitle class="text-body-2">{{ station.country }}</v-card-subtitle>
           <v-card-actions>
-            <v-btn @click="toggleFavorite(station)" color="primary">
-            <v-icon :color="isFavorite(station) ? 'red' : 'grey'">{{ isFavorite(station) ? 'mdi-heart' : 'mdi-heart-outline' }}</v-icon>
+            <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+            <v-btn @click="toggleFavorite(station)" :color="station.favorite ? 'error' : 'primary'">
+            <v-icon>{{ station.favorite ? 'mdi-heart' : 'mdi-heart-outline' }}</v-icon>
             </v-btn>
             <v-btn @click="playStation(station)" color="primary">Play</v-btn>
           </v-card-actions>
@@ -58,18 +57,21 @@ export default {
   },
   methods: {
     fetchStations() {
-      fetch('https://de1.api.radio-browser.info/json/stations')
-        .then(response => response.json())
-        .then(data => {
-          this.stations = data;
-          this.loading = false;
-          this.filterStations();
-        })
-        .catch(error => {
-          console.error('Error fetching stations:', error);
-          this.loading = false;
-        });
-    },
+  fetch('https://de1.api.radio-browser.info/json/stations')
+    .then(response => response.json())
+    .then(data => {
+      this.stations = data.map(station => ({
+        ...station,
+        favorite: this.isFavorite(station)  // Aggiungi la proprietà 'favorite' a ogni stazione
+      }));
+      this.loading = false;
+      this.filterStations();
+    })
+    .catch(error => {
+      console.error('Error fetching stations:', error);
+      this.loading = false;
+    });
+},
     filterStations() {
       this.filteredStations = this.stations.filter(station => {
         return (
@@ -91,7 +93,7 @@ export default {
   let favorites = JSON.parse(localStorage.getItem('favoriteStations')) || [];
 
   // Verifica se la stazione è già presente tra i preferiti
-  if (!favorites.some(favorite => favorite.id === station.id)) {
+  if (!favorites.some(favorite => favorite.url === station.url)) {
     // Aggiungi la stazione preferita al local storage
     favorites.push(station);
     localStorage.setItem('favoriteStations', JSON.stringify(favorites));
@@ -100,18 +102,24 @@ export default {
     console.log('Stazione già presente nei preferiti');
   }
 },
+
     removeFromFavorites(station) {
       // Rimuovi la stazione dai preferiti
       this.favorites = this.favorites.filter(favorite => favorite.id !== station.id);
     },
-    toggleFavorite(station) {
-      // Se la stazione è già nei preferiti, rimuovila, altrimenti aggiungila
-      if (this.isFavorite(station)) {
-        this.removeFromFavorites(station);
-      } else {
-        this.addToFavorites(station);
-      }
-    },
+// Dentro il ciclo di creazione delle stazioni radio
+
+// Nel metodo toggleFavorite()
+toggleFavorite(station) {
+  // Inverti lo stato della preferenza della stazione radio
+  station.favorite = !station.favorite;
+  // Aggiungi o rimuovi la stazione radio dai preferiti
+  if (station.favorite) {
+    this.addToFavorites(station);
+  } else {
+    this.removeFromFavorites(station);
+  }
+},
     isFavorite(station) {
       // Verifica se la stazione è presente nei preferiti
       return this.favorites.some(favorite => favorite.id === station.id);

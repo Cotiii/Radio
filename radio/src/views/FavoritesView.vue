@@ -1,6 +1,6 @@
 <template>
   <div class="Favorites">
-    <h1>FAVORITE</h1>
+    <h1>Preferiti</h1>
     <v-row>
       <v-col
         v-for="station in favoriteStations"
@@ -20,8 +20,11 @@
             <p>Country: {{ station.country }}</p>
           </v-card-text>
           <v-card-actions>
-            <v-btn @click="removeFromFavorites(station)" color="error">Remove from Favorites</v-btn>
-            <v-btn @click="playStation(station)" color="primary">Play</v-btn>
+            <link href="https://cdn.jsdelivr.net/npm/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet">
+            <v-btn @click="removeFromFavorites(station)" :color="station.favorite ? 'error' : 'primary'">
+            <v-icon>{{ station.favorite ? 'mdi-heart' : 'mdi-heart-outline' }}</v-icon>
+          </v-btn>
+         <v-btn @click="playStation(station)" color="primary">Play</v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
@@ -30,50 +33,76 @@
 </template>
 
 <script>
-import defaultImage from '@/assets/radio.avif'; // Importa l'immagine di default da assets
+import defaultImage from '@/assets/radio.avif';
 
 export default {
   name: 'FavoritesView',
   data() {
     return {
-      favoriteStations: [], // Stazioni preferite
-      defaultImage: defaultImage, // URL dell'immagine di default
-      currentAudio: null // Elemento audio corrente
+      favoriteStations: [],
+      defaultImage: defaultImage,
+      currentAudio: null
     };
   },
   methods: {
-    // Recupera le stazioni preferite dal local storage
     fetchFavoriteStations() {
       const favorites = localStorage.getItem('favoriteStations');
       if (favorites) {
-        this.favoriteStations = JSON.parse(favorites);
+        this.favoriteStations = JSON.parse(favorites).map(station => ({
+          ...station,
+          favorite: true // Imposta la proprietà 'favorite' su true per ciascuna stazione
+        }));
       }
     },
-    // Aggiunge una stazione alle preferite e salva nel local storage
     addToFavorites(station) {
-      this.favoriteStations.push(station);
-      localStorage.setItem('favoriteStations', JSON.stringify(this.favoriteStations));
+      let favorites = JSON.parse(localStorage.getItem('favoriteStations')) || [];
+
+      if (!this.isFavorite(station)) {
+        favorites.push(station);
+        localStorage.setItem('favoriteStations', JSON.stringify(favorites));
+        this.favoriteStations = favorites.map(station => ({
+          ...station,
+          favorite: true // Imposta la proprietà 'favorite' su true per ciascuna stazione
+        }));
+      } else {
+        console.log('Stazione già presente nei preferiti');
+      }
     },
-    // Rimuove una stazione dalle preferite e aggiorna il local storage
     removeFromFavorites(station) {
       this.favoriteStations = this.favoriteStations.filter(item => item.id !== station.id);
+      this.updateLocalStorage();
+    },
+    updateLocalStorage() {
       localStorage.setItem('favoriteStations', JSON.stringify(this.favoriteStations));
     },
-    // Riproduce una stazione
     playStation(station) {
-      // Implementa la logica per riprodurre la stazione radio
+      if (this.currentAudio && this.currentAudio.src === station.url) {
+        this.currentAudio.pause();
+        this.currentAudio = null;
+      } else {
+        if (this.currentAudio) {
+          this.currentAudio.pause();
+        }
+        this.currentAudio = new Audio(station.url);
+        this.currentAudio.addEventListener('ended', () => {
+          this.currentAudio = null;
+        });
+        this.currentAudio.play();
+      }
     },
-    // Ottiene l'icona della stazione
     getStationIcon(station) {
       return station.favicon || this.defaultImage;
+    },
+    isFavorite(station) {
+      return this.favoriteStations.some(favorite => favorite.id === station.id);
     }
   },
   created() {
-    // Carica le stazioni preferite al caricamento della pagina
     this.fetchFavoriteStations();
   }
 };
 </script>
+
 
 <style>
 /* Stili per le card, se necessario */
